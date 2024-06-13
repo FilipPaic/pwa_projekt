@@ -13,16 +13,21 @@
     </style>
 </head>
 <body>
+    <?php
+    session_start();
+    if (!isset($_SESSION['korisnicko_ime']) || $_SESSION['razina'] != 1) {
+        echo '<p>Nemate dovoljna prava za pristup ovoj stranici. <a href="login.php">Prijava</a></p>';
+        exit();
+    }
+    ?>
     <header>
         <h1>El Confidencial</h1>
         <p>EL DIARIO DE LOS LECTORES INFLUYENTES</p>
         <nav>
             <ul>
-                <li><a href="index.html">Home</a></li>
-                <li><a href="#">Europa</a></li>
-                <li><a href="#">Teknautas</a></li>
-                <li><a href="#">Administracija</a></li>
-                <li><a href="unos.html">Unos Vijesti</a></li>
+                <li><a href="index.php">Home</a></li>
+                <li><a href="unos.php">Unos Vijesti</a></li>
+                <li><a href="administrator.php">Administracija</a></li>
             </ul>
         </nav>
     </header>
@@ -30,7 +35,7 @@
     <main>
         <section>
             <h2>Unos Novih Vijesti</h2>
-            <form name="unosVijesti" action="skripta.php" method="POST" enctype="multipart/form-data">
+            <form name="unosVijesti" action="unos.php" method="POST" enctype="multipart/form-data">
                 <div class="form-item">
                     <span id="porukaTitle" class="bojaPoruke"></span>
                     <label for="title">Naslov vijesti</label>
@@ -83,7 +88,6 @@
         document.getElementById("slanje").onclick = function(event) {
             var slanjeForme = true;
 
-            // Naslov vijesti (5-30 znakova)
             var poljeTitle = document.getElementById("title");
             var title = poljeTitle.value;
             if (title.length < 5 || title.length > 30) {
@@ -95,7 +99,6 @@
                 document.getElementById("porukaTitle").innerHTML="";
             }
 
-            // Kratki sadržaj (10-100 znakova)
             var poljeAbout = document.getElementById("about");
             var about = poljeAbout.value;
             if (about.length < 10 || about.length > 100) {
@@ -107,7 +110,6 @@
                 document.getElementById("porukaAbout").innerHTML="";
             }
 
-            // Sadržaj mora biti unesen
             var poljeContent = document.getElementById("content");
             var content = poljeContent.value;
             if (content.length == 0) {
@@ -119,7 +121,6 @@
                 document.getElementById("porukaContent").innerHTML="";
             }
 
-            // Slika mora biti unesena
             var poljeSlika = document.getElementById("pphoto");
             var pphoto = poljeSlika.value;
             if (pphoto.length == 0) {
@@ -131,7 +132,6 @@
                 document.getElementById("porukaSlika").innerHTML="";
             }
 
-            // Kategorija mora biti odabrana
             var poljeCategory = document.getElementById("category");
             if(poljeCategory.selectedIndex == 0) {
                 slanjeForme = false;
@@ -149,3 +149,28 @@
     </script>
 </body>
 </html>
+
+<?php
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    include 'connect.php';
+
+    $title = $_POST['title'];
+    $about = $_POST['about'];
+    $content = $_POST['content'];
+    $category = $_POST['category'];
+    $archive = isset($_POST['archive']) ? 1 : 0;
+    $picture = $_FILES['pphoto']['name'];
+    $target_dir = 'img/';
+    $target_file = $target_dir . basename($picture);
+    move_uploaded_file($_FILES["pphoto"]["tmp_name"], $target_file);
+
+    $query = "INSERT INTO vijesti (datum, naslov, sazetak, tekst, slika, kategorija, arhiva) VALUES (NOW(), ?, ?, ?, ?, ?, ?)";
+    $stmt = mysqli_stmt_init($conn);
+    if (mysqli_stmt_prepare($stmt, $query)) {
+        mysqli_stmt_bind_param($stmt, 'sssssi', $title, $about, $content, $picture, $category, $archive);
+        mysqli_stmt_execute($stmt);
+    }
+
+    mysqli_close($conn);
+}
+?>
